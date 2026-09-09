@@ -1,0 +1,10 @@
+﻿"test_prompt","agent_response_excerpt","intent_resolution","relevance","groundedness","comments"
+"day-hike-gear","For a summer day hike in moderate terrain, aim for a lightweight setup built around hydration, sun/heat management, navigation, and basic emergency readiness. H","4","3","4","Clear and comprehensive response"
+"overnight-camping","### 1) Start with the right trip plan (keep it simple)
+For your first overnight, pick a **low-risk “shakedown” trip**:
+- **Distance:** 1–5 miles (2–8 km) from t","3","4","4","Good safety focus and practical guidance"
+"three-day-backpacking","### Most critical safety considerations for a 3‑day mountain backpacking trip in October
+
+October in the mountains is “shoulder season”: fewer people, shorter d","5","3","5","Clear and comprehensive response"
+"trail-difficulty","To judge whether a trail matches your fitness level as a beginner, use a quick “difficulty screen” based on distance, elevation gain, terrain, time-on-feet, and","3","4","4","Helpful and actionable answer"
+"winter-hiking","Winter hiking adds three big challenges vs summer: **cold injury risk**, **snow/ice traction**, and **shorter daylight + harsher weather**. Here’s what you typi","3","4","4","Clear and comprehensive response"
