@@ -30,13 +30,22 @@ from openai.types.evals.create_eval_jsonl_run_data_source_param import (
 load_dotenv()  # reads variables from the .env file in your project root
 
 endpoint              = os.environ.get("AZURE_AI_PROJECT_ENDPOINT")
-model_deployment_name = os.environ.get("MODEL_NAME", "gpt-5.1")
-dataset_name          = "trail-guide-evaluation-dataset"
-dataset_version       = "1"
+model_deployment_name = os.environ.get("MODEL_NAME", "gpt-5.2")
+dataset_name          = os.environ.get("EVALUATION_DATASET_NAME", "trail-guide-evaluation-dataset")
+dataset_version       = os.environ.get("EVALUATION_DATASET_VERSION", "1")
+repo_root             = Path(__file__).resolve().parents[2]
+dataset_path          = Path(
+    os.environ.get(
+        "EVALUATION_DATASET_PATH",
+        str(repo_root / "data" / "trail_guide_evaluation_dataset.jsonl"),
+    )
+)
+if not dataset_path.is_absolute():
+    dataset_path = repo_root / dataset_path
 
 # The script writes a plain-text summary here when it finishes.
-# This file is committed to the branch so the GitHub Actions workflow
-# can read it and post results as a PR comment — no re-running needed.
+# This file records a local, full evaluation. GitHub Actions runs its own
+# reduced smoke evaluation before a pull request is promoted.
 RESULTS_FILE = Path("evaluation_results.txt")
 
 if not endpoint:
@@ -83,12 +92,6 @@ def upload_dataset() -> str:
       - ground_truth : the expected correct answer (used by some evaluators)
     """
     section("Step 1: Uploading evaluation dataset")
-
-    dataset_path = (
-        Path(__file__).parent.parent.parent
-        / "data"
-        / "trail_guide_evaluation_dataset.jsonl"
-    )
 
     if not dataset_path.exists():
         raise FileNotFoundError(
@@ -234,7 +237,8 @@ def run_evaluation(eval_object, data_id):
     print(f"\n✓ Evaluation run started")
     print(f"  Run ID: {eval_run.id}")
     print(f"  Status: {eval_run.status}")
-    print(f"\nThis may take 15-60+ minutes for 89 items depending on capacity and quota...")
+    item_count = sum(1 for line in dataset_path.read_text(encoding="utf-8").splitlines() if line.strip())
+    print(f"\nThis may take longer for larger datasets ({item_count} item(s)) depending on capacity and quota...")
     return eval_run
 
 
@@ -292,8 +296,8 @@ def retrieve_and_display_results(eval_object, run):
 
     Scores are on a 1-5 scale; a score >= 3 is considered a pass.
 
-    The written file is intended to be committed to the branch so the
-    GitHub Actions workflow can read it without re-running the evaluation.
+    The written file is local evaluation evidence. GitHub Actions runs its
+    own reduced smoke evaluation and does not reuse this file.
 
     Returns the raw list of output items for any further inspection.
     """
@@ -382,10 +386,11 @@ def retrieve_and_display_results(eval_object, run):
 
     print(summary)
 
-    # Write to file so the GitHub Actions 'comment' job can read it directly
+    # Keep a local summary. The CI workflow writes its own summary on its
+    # ephemeral runner.
     RESULTS_FILE.write_text(summary, encoding="utf-8")
     print(f"\n  Results saved to {RESULTS_FILE}")
-    print(f"  Commit this file so the GitHub Actions workflow can read it.")
+    print(f"  Review it in Foundry; commit it only if you want versioned local evidence.")
 
     # Emit report_url as a GitHub Actions step output when running in CI
     report_url = getattr(run, "report_url", None) or (
@@ -423,7 +428,7 @@ def main() -> None:
         print(f"\nNext steps:")
         print(f"  1. Review detailed results in Azure AI Foundry portal")
         print(f"  2. Analyze patterns in successful and failed evaluations")
-        print(f"  3. Commit {RESULTS_FILE} and push so the PR workflow can use it")
+        print(f"  3. Keep {RESULTS_FILE} as optional local evidence; CI runs its own smoke evaluation")
 
     except Exception as e:
         error_message = (
@@ -434,7 +439,7 @@ def main() -> None:
             f"\nTroubleshooting:\n"
             f"  - Verify AZURE_AI_PROJECT_ENDPOINT in .env file\n"
             f"  - Check Azure credentials: az login\n"
-            f"  - Ensure GPT-5.1 model is deployed and accessible\n"
+            f"  - Ensure the configured MODEL_NAME is deployed and accessible\n"
             f"  - Ensure the caller has Foundry User access at the AI account scope\n"
             f"  - If you just ran azd up, wait 1-2 minutes for role propagation and retry once\n"
         )
